@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QR 코드 생성기</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f0f0f0;
+        }
+        h2 {
+            color: #333;
+            text-align: center;
+        }
+        .input-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            color: #555;
+        }
+        input[type="text"], input[type="number"] {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        input[type="color"] {
+            width: 50px;
+            height: 30px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        button {
+            display: block;
+            width: 100%;
+            padding: 10px;
+            background-color: #0056ff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: background-color 0.3s;
+        }
+        button:hover {
+            background-color: #003bb3;
+        }
+        #qrcode {
+            text-align: center;
+            margin-top: 20px;
+            margin-bottom: 20px;
+        }
+        #qrGuide {
+            color: grey;
+            text-align: center;
+            margin-top: 10px;
+            width: calc(100% - 2px);
+            height: 250px;
+            border-radius: 10px;
+            border: 1px solid #ddd;
+            background-color: #f9f9f9;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        #qrCodeContainer {
+            width: calc(100% - 2px);
+            border-radius: 10px;
+            border: 1px solid #ddd;
+            background-color: #f9f9f9;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin-top: 10px;
+            display: none;
+        }
+        canvas {
+            max-width: 100%;
+            height: auto;
+        }
+    </style>
+</head>
+<body>
+
+    <h2>QR 코드 생성기</h2>
+    
+    <div class="input-group">
+        <label for="urlInput">URL 입력:</label>
+        <input type="text" id="urlInput" placeholder="http://example.com" value="">
+    </div>
+    
+    <div class="input-group">
+        <label for="sizeInput">크기 입력:</label>
+        <input type="number" id="sizeInput" min="1" max="1000" value="256">
+    </div>
+    
+    <div class="input-group">
+        <label for="colorDark">QR 코드 색상:</label>
+        <input type="color" id="colorDark" value="#000000">
+    </div>
+    
+    <div class="input-group">
+        <label for="colorLight">QR 코드 배경 색상:</label>
+        <input type="color" id="colorLight" value="#ffffff">
+    </div>
+    
+    <button onclick="generateQRCode()">QR 코드 생성</button>
+
+    <div id="qrCodeContainer">
+        <div id="qrcode" style="display: none;"></div>
+    </div>
+    <div id="qrGuide" style="color: grey; text-align: center; margin-top: 10px;">QR코드를 생성해 보세요.</div>
+    <div id="errorMessage" style="color: red; text-align: center; margin-top: 10px; display: none;">URL을 입력해주세요.</div>
+    <button id="downloadBtn" style="display:none; margin-top: 15px;" onclick="downloadQRCode()">QR 코드 다운로드</button>
+
+    <script>
+        function generateQRCode() {
+            var url = document.getElementById('urlInput').value;
+            var size = document.getElementById('sizeInput').value;
+            var colorDark = document.getElementById('colorDark').value;
+            var colorLight = document.getElementById('colorLight').value;
+            var qrCodeContainer = document.getElementById('qrCodeContainer');
+            var qrCodeElem = document.getElementById('qrcode');
+            var qrGuide = document.getElementById('qrGuide');
+            var errorMessage = document.getElementById('errorMessage');
+            qrCodeElem.innerHTML = ""; // 기존 QR 코드 삭제
+            errorMessage.style.display = 'none'; // 에러 메시지 숨기기
+
+            if (url === "") {
+                qrCodeContainer.style.display = 'none';
+                errorMessage.style.display = 'block'; // 에러 메시지 표시
+                qrGuide.style.display = 'flex'; // 안내 메시지 표시
+                qrCodeElem.style.display = 'none'; // QR 코드 숨기기
+                document.getElementById('downloadBtn').style.display = 'none'; // 다운로드 버튼 숨기기
+                return;
+            }
+
+            // QR 코드 생성
+            new QRCode(qrCodeElem, {
+                text: url,
+                width: size,
+                height: size,
+                colorDark : colorDark,
+                colorLight : colorLight,
+                correctLevel: QRCode.CorrectLevel.H
+            });
+
+            // QR 코드 표시 및 안내 메시지 숨기기
+            qrGuide.style.display = 'none';
+            qrCodeElem.style.display = 'block';
+            qrCodeContainer.style.display = 'flex';
+
+            // 다운로드 버튼 표시
+            document.getElementById('downloadBtn').style.display = 'block';
+        }
+
+        function downloadQRCode() {
+            // QR 코드가 있는 canvas 요소 가져오기
+            var canvas = document.querySelector('#qrcode canvas');
+            if (!canvas) return;
+
+            // canvas를 데이터 URL로 변환 (PNG 이미지)
+            var image = canvas.toDataURL("image/png");
+
+            // 가상 링크 생성 후 클릭하여 이미지 다운로드
+            var link = document.createElement('a');
+            link.href = image;
+            link.download = 'qrcode.png';
+            link.click();
+        }
+
+        
+    </script>
+
+</body>
+</html>

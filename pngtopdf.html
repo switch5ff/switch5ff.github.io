@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PNG to PDF Converter</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+</head>
+<body>
+    <h1>PNG를 PDF로 변환 (여백 없이)</h1>
+    <input type="file" id="upload" accept="image/png">
+    <button onclick="convertToPDF()">PDF로 변환</button>
+
+    <script>
+        async function convertToPDF() {
+            const fileInput = document.getElementById('upload');
+            const file = fileInput.files[0];
+
+            if (!file) {
+                alert("PNG 파일을 선택해주세요.");
+                return;
+            }
+
+            // 파일을 읽어 base64로 변환
+            const reader = new FileReader();
+            reader.readAsDataURL(file);
+
+            reader.onload = function() {
+                const imgData = reader.result; // base64 이미지 데이터
+
+                // 이미지를 임시로 로드하여 크기를 계산
+                const img = new Image();
+                img.src = imgData;
+                img.onload = function() {
+                    const imgWidth = img.width;
+                    const imgHeight = img.height;
+
+                    // jsPDF 문서를 이미지 크기에 맞춰 생성
+                    const { jsPDF } = window.jspdf;
+                    const doc = new jsPDF({
+                        orientation: imgWidth > imgHeight ? 'landscape' : 'portrait',
+                        unit: 'px',
+                        format: [imgWidth, imgHeight]
+                    });
+
+                    // 이미지 추가 (여백 없이 0, 0에 맞춤)
+                    doc.addImage(imgData, 'PNG', 0, 0, imgWidth, imgHeight);
+
+                    // PDF 파일 저장
+                    doc.save('output.pdf');
+                };
+            };
+
+            reader.onerror = function(error) {
+                console.log('Error: ', error);
+            };
+        }
+    </script>
+</body>
+</html>

@@ -1,59 +1,118 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ko">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PNG to PDF Converter</title>
+    <title>PNG를 PDF로 변환</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            text-align: center;
+        }
+        h1 {
+            color: #333;
+        }
+        #upload {
+            display: none;
+        }
+        .btn {
+            display: inline-block;
+            padding: 10px 20px;
+            margin: 10px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+            font-size: 16px;
+        }
+        .btn:hover {
+            background-color: #45a049;
+        }
+        #fileList {
+            margin-top: 20px;
+            text-align: left;
+        }
+    </style>
 </head>
 <body>
     <h1>PNG를 PDF로 변환 (여백 없이)</h1>
-    <input type="file" id="upload" accept="image/png">
-    <button onclick="convertToPDF()">PDF로 변환</button>
+    <input type="file" id="upload" accept="image/png" multiple>
+    <label for="upload" class="btn">PNG 파일 선택</label>
+    <button onclick="convertToPDF()" class="btn">PDF로 변환</button>
+    <div id="fileList"></div>
 
     <script>
-        async function convertToPDF() {
-            const fileInput = document.getElementById('upload');
-            const file = fileInput.files[0];
+        let selectedFiles = [];
 
-            if (!file) {
+        document.getElementById('upload').addEventListener('change', function(event) {
+            selectedFiles = Array.from(event.target.files);
+            updateFileList();
+        });
+
+        function updateFileList() {
+            const fileList = document.getElementById('fileList');
+            fileList.innerHTML = '<h3>선택된 파일:</h3>';
+            selectedFiles.forEach((file, index) => {
+                fileList.innerHTML += `<p>${index + 1}. ${file.name}</p>`;
+            });
+        }
+
+        async function convertToPDF() {
+            if (selectedFiles.length === 0) {
                 alert("PNG 파일을 선택해주세요.");
                 return;
             }
 
-            // 파일을 읽어 base64로 변환
-            const reader = new FileReader();
-            reader.readAsDataURL(file);
+            const { jsPDF } = window.jspdf;
+            let doc;
 
-            reader.onload = function() {
-                const imgData = reader.result; // base64 이미지 데이터
+            for (let i = 0; i < selectedFiles.length; i++) {
+                const file = selectedFiles[i];
+                const imgData = await readFileAsDataURL(file);
+                const img = await loadImage(imgData);
 
-                // 이미지를 임시로 로드하여 크기를 계산
-                const img = new Image();
-                img.src = imgData;
-                img.onload = function() {
-                    const imgWidth = img.width;
-                    const imgHeight = img.height;
-
-                    // jsPDF 문서를 이미지 크기에 맞춰 생성
-                    const { jsPDF } = window.jspdf;
-                    const doc = new jsPDF({
-                        orientation: imgWidth > imgHeight ? 'landscape' : 'portrait',
+                // 첫 번째 이미지일 경우 새로운 PDF 문서 생성
+                if (i === 0) {
+                    doc = new jsPDF({
+                        orientation: img.width > img.height ? 'landscape' : 'portrait',
                         unit: 'px',
-                        format: [imgWidth, imgHeight]
+                        format: [img.width, img.height]
                     });
+                } else {
+                    // 두 번째 이미지부터는 새 페이지 추가
+                    doc.addPage([img.width, img.height], img.width > img.height ? 'landscape' : 'portrait');
+                }
 
-                    // 이미지 추가 (여백 없이 0, 0에 맞춤)
-                    doc.addImage(imgData, 'PNG', 0, 0, imgWidth, imgHeight);
+                // 이미지를 페이지 전체에 꽉 차게 추가
+                doc.addImage(imgData, 'PNG', 0, 0, img.width, img.height);
+            }
 
-                    // PDF 파일 저장
-                    doc.save('output.pdf');
-                };
-            };
+            // 모든 이미지 처리가 끝난 후 PDF 저장
+            doc.save('output.pdf');
+        }
 
-            reader.onerror = function(error) {
-                console.log('Error: ', error);
-            };
+        function readFileAsDataURL(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = () => resolve(reader.result);
+                reader.onerror = reject;
+                reader.readAsDataURL(file);
+            });
+        }
+
+        function loadImage(src) {
+            return new Promise((resolve, reject) => {
+                const img = new Image();
+                img.onload = () => resolve(img);
+                img.onerror = reject;
+                img.src = src;
+            });
         }
     </script>
 </body>

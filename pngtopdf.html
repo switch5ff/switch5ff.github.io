@@ -64,15 +64,27 @@
         }
         .imagePreview {
             position: relative;
-            width: 100px;
-            height: 100px;
+            width: 150px;
+            height: 150px;
+            margin-bottom: 20px;
         }
         .imagePreview img {
             width: 100%;
-            height: 100%;
+            height: 120px;
             object-fit: contain;
             border: 1px solid #ddd;
-            border-radius: 4px;
+            border-radius: 4px 4px 0 0;
+        }
+        .fileName {
+            font-size: 12px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            padding: 5px;
+            background-color: #f0f0f0;
+            border: 1px solid #ddd;
+            border-top: none;
+            border-radius: 0 0 4px 4px;
         }
         .removeBtn {
             position: absolute;
@@ -113,7 +125,7 @@
     </button>
     
     <div id="imagePreviewContainer"></div>
-    <div id="fileList" class="mdc-typography--body2"></div>
+    <!-- fileList 제거 -->
 
     <script>
         let selectedFiles = [];
@@ -148,16 +160,7 @@
         function handleFiles(files) {
             const newFiles = Array.from(files).filter(file => file.type === 'image/png');
             selectedFiles = [...selectedFiles, ...newFiles];
-            updateFileList();
             updateImagePreviews();
-        }
-
-        function updateFileList() {
-            const fileList = document.getElementById('fileList');
-            fileList.innerHTML = '<h3 class="mdc-typography--subtitle1">선택된 파일:</h3>';
-            selectedFiles.forEach((file, index) => {
-                fileList.innerHTML += `<p>${index + 1}. ${file.name}</p>`;
-            });
         }
 
         function updateImagePreviews() {
@@ -171,12 +174,17 @@
                     const img = document.createElement('img');
                     img.src = e.target.result;
                     
+                    const fileName = document.createElement('div');
+                    fileName.classList.add('fileName');
+                    fileName.textContent = file.name;
+                    
                     const removeBtn = document.createElement('button');
                     removeBtn.classList.add('removeBtn');
                     removeBtn.innerHTML = '×';
                     removeBtn.onclick = () => removeFile(index);
                     
                     previewDiv.appendChild(img);
+                    previewDiv.appendChild(fileName);
                     previewDiv.appendChild(removeBtn);
                     imagePreviewContainer.appendChild(previewDiv);
                 };
@@ -186,7 +194,6 @@
 
         function removeFile(index) {
             selectedFiles.splice(index, 1);
-            updateFileList();
             updateImagePreviews();
         }
 

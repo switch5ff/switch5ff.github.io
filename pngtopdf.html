@@ -4,63 +4,190 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>PNG를 PDF로 변환</title>
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <link href="https://unpkg.com/material-components-web@latest/dist/material-components-web.min.css" rel="stylesheet">
+    <script src="https://unpkg.com/material-components-web@latest/dist/material-components-web.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <style>
         body {
-            font-family: Arial, sans-serif;
+            font-family: Roboto, sans-serif;
             max-width: 800px;
             margin: 0 auto;
             padding: 20px;
             text-align: center;
+            background-color: #f5f5f5;
         }
-        h1 {
-            color: #333;
+        .mdc-typography--headline4 {
+            margin-bottom: 24px;
         }
         #upload {
             display: none;
         }
-        .btn {
-            display: inline-block;
-            padding: 10px 20px;
-            margin: 10px;
-            background-color: #4CAF50;
-            color: white;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
-            transition: background-color 0.3s;
-            font-size: 16px;
-        }
-        .btn:hover {
-            background-color: #45a049;
+        .file-input-label {
+            display: inline-flex;
+            align-items: center;
         }
         #fileList {
             margin-top: 20px;
             text-align: left;
+            background-color: white;
+            padding: 16px;
+            border-radius: 4px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .mdc-button {
+            margin: 8px;
+        }
+        #dropZone {
+            border: 2px dashed #ccc;
+            border-radius: 20px;
+            width: 100%;
+            height: 100px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+            color: #666;
+            margin-bottom: 20px;
+            transition: background-color 0.3s, border-color 0.3s;
+        }
+        #dropZone.drag-over {
+            background-color: #e1e1e1;
+            border-color: #999;
+        }
+        #imagePreviewContainer {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 10px;
+            margin-top: 20px;
+        }
+        .imagePreview {
+            position: relative;
+            width: 100px;
+            height: 100px;
+        }
+        .imagePreview img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        .removeBtn {
+            position: absolute;
+            top: -10px;
+            right: -10px;
+            background-color: #ff4081;
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            font-size: 16px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
     </style>
 </head>
-<body>
-    <h1>PNG를 PDF로 변환 (여백 없이)</h1>
-    <input type="file" id="upload" accept="image/png" multiple>
-    <label for="upload" class="btn">PNG 파일 선택</label>
-    <button onclick="convertToPDF()" class="btn">PDF로 변환</button>
-    <div id="fileList"></div>
+<body class="mdc-typography">
+    <h1 class="mdc-typography--headline4">PNG를 PDF로 변환 (여백 없이)</h1>
+    
+    <div id="dropZone">
+        PNG 파일을 여기에 드래그하거나 클릭하여 선택하세요
+    </div>
+    <input type="file" id="upload" accept="image/png" multiple style="display: none;">
+    
+    <button id="addMoreBtn" class="mdc-button mdc-button--raised">
+        <span class="mdc-button__ripple"></span>
+        <i class="material-icons mdc-button__icon" aria-hidden="true">add_photo_alternate</i>
+        <span class="mdc-button__label">파일 추가</span>
+    </button>
+    
+    <button id="convertBtn" class="mdc-button mdc-button--raised">
+        <span class="mdc-button__ripple"></span>
+        <i class="material-icons mdc-button__icon" aria-hidden="true">picture_as_pdf</i>
+        <span class="mdc-button__label">PDF로 변환</span>
+    </button>
+    
+    <div id="imagePreviewContainer"></div>
+    <div id="fileList" class="mdc-typography--body2"></div>
 
     <script>
         let selectedFiles = [];
 
-        document.getElementById('upload').addEventListener('change', function(event) {
-            selectedFiles = Array.from(event.target.files);
-            updateFileList();
+        const dropZone = document.getElementById('dropZone');
+        const uploadInput = document.getElementById('upload');
+        const imagePreviewContainer = document.getElementById('imagePreviewContainer');
+        const addMoreBtn = document.getElementById('addMoreBtn');
+
+        dropZone.addEventListener('click', () => uploadInput.click());
+        addMoreBtn.addEventListener('click', () => uploadInput.click());
+
+        dropZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            dropZone.classList.add('drag-over');
         });
+
+        dropZone.addEventListener('dragleave', () => {
+            dropZone.classList.remove('drag-over');
+        });
+
+        dropZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropZone.classList.remove('drag-over');
+            handleFiles(e.dataTransfer.files);
+        });
+
+        uploadInput.addEventListener('change', (e) => {
+            handleFiles(e.target.files);
+        });
+
+        function handleFiles(files) {
+            const newFiles = Array.from(files).filter(file => file.type === 'image/png');
+            selectedFiles = [...selectedFiles, ...newFiles];
+            updateFileList();
+            updateImagePreviews();
+        }
 
         function updateFileList() {
             const fileList = document.getElementById('fileList');
-            fileList.innerHTML = '<h3>선택된 파일:</h3>';
+            fileList.innerHTML = '<h3 class="mdc-typography--subtitle1">선택된 파일:</h3>';
             selectedFiles.forEach((file, index) => {
                 fileList.innerHTML += `<p>${index + 1}. ${file.name}</p>`;
             });
+        }
+
+        function updateImagePreviews() {
+            imagePreviewContainer.innerHTML = '';
+            selectedFiles.forEach((file, index) => {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    const previewDiv = document.createElement('div');
+                    previewDiv.classList.add('imagePreview');
+                    
+                    const img = document.createElement('img');
+                    img.src = e.target.result;
+                    
+                    const removeBtn = document.createElement('button');
+                    removeBtn.classList.add('removeBtn');
+                    removeBtn.innerHTML = '×';
+                    removeBtn.onclick = () => removeFile(index);
+                    
+                    previewDiv.appendChild(img);
+                    previewDiv.appendChild(removeBtn);
+                    imagePreviewContainer.appendChild(previewDiv);
+                };
+                reader.readAsDataURL(file);
+            });
+        }
+
+        function removeFile(index) {
+            selectedFiles.splice(index, 1);
+            updateFileList();
+            updateImagePreviews();
         }
 
         async function convertToPDF() {
@@ -77,7 +204,6 @@
                 const imgData = await readFileAsDataURL(file);
                 const img = await loadImage(imgData);
 
-                // 첫 번째 이미지일 경우 새로운 PDF 문서 생성
                 if (i === 0) {
                     doc = new jsPDF({
                         orientation: img.width > img.height ? 'landscape' : 'portrait',
@@ -85,15 +211,12 @@
                         format: [img.width, img.height]
                     });
                 } else {
-                    // 두 번째 이미지부터는 새 페이지 추가
                     doc.addPage([img.width, img.height], img.width > img.height ? 'landscape' : 'portrait');
                 }
 
-                // 이미지를 페이지 전체에 꽉 차게 추가
                 doc.addImage(imgData, 'PNG', 0, 0, img.width, img.height);
             }
 
-            // 모든 이미지 처리가 끝난 후 PDF 저장
             doc.save('output.pdf');
         }
 
@@ -114,6 +237,10 @@
                 img.src = src;
             });
         }
+
+        // Material 컴포넌트 초기화
+        mdc.ripple.MDCRipple.attachTo(document.querySelector('.mdc-button'));
+        document.getElementById('convertBtn').addEventListener('click', convertToPDF);
     </script>
 </body>
 </html>
